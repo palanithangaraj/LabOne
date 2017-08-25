@@ -7,8 +7,7 @@ node {
 
             stage 'preTest'
             sh 'go version'
-            sh 'dep init'
-
+            
             stage 'Test'
             sh 'go vet'
             sh 'go test -cover'
