@@ -5,11 +5,8 @@ node {
 
             stage 'Checkout'
 
-            git url: 'https://github.com/palanithangaraj/LabOne.git'
-
             stage 'preTest'
             sh 'go version'
-            sh 'go get -u github.com/golang/dep/...'
             sh 'dep init'
 
             stage 'Test'
