@@ -1,33 +1,25 @@
-#!/usr/bin/env groovy
+node {
+     ws("${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_ID}/src/LabOne") {
+        withEnv(["GOROOT=/usr/local/go", "GOPATH=${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_ID}/", "PATH+GO=/usr/local/go/bin"]) {
+            env.PATH="${GOPATH}/bin:$PATH"
 
-// this will start an executor on a Jenkins agent with the docker label
-node('docker') {
-  // Setup variables
-  // application name will be used in a few places so create a variable and use string interpolation to use it where needed
-  String applicationName = "LabOne"
-  // a basic build number so that when we build and push to Artifactory we will not overwrite our previous builds
-  String buildNumber = "0.1.${env.BUILD_NUMBER}"
-  // Path we will mount the project to for the Docker container
-  String goPath = "/home/palani/${applicationName}"
+            stage 'Checkout'
 
-  // Checkout the code from Github, stages allow Jenkins to visualize the different sections of your build steps in the UI
-  stage('Checkout from GitHub') {
-    // No special needs here, if your projects relys on submodules the checkout step would need to be different
-    checkout scm
-  }
+            git url: 'https://github.com/palanithangaraj/LabOne.git'
 
-  // Start a docker container using the golang:1.8.0-alpine image, mount the current directory to the goPath we specified earlier
-  stage("Create binaries") {
-    docker.image("golang:1.8.0-alpine").inside("-v ${pwd()}:${goPath}") {
-      for (command in binaryBuildCommands) {
-        // build the Linux x64 binary
-        sh "cd ${goPath} && GOOS=linux GOARCH=amd64 go build -o binaries/amd64/${buildNumber}/linux/${applicationName}-${buildNumber}.linux.amd64"
-      }
+            stage 'preTest'
+            sh 'go version'
+            sh 'go get -u github.com/golang/dep/...'
+            sh 'dep init'
+
+            stage 'Test'
+            sh 'go vet'
+            sh 'go test -cover'
+
+            stage 'Build'
+            sh 'go build .'
+
+            stage 'Deploy'
+            // Do nothing.
+        }
     }
-  }
-
-  stage("Archive artifacts") {
-    // Archive the binary files in Jenkins so we can retrieve them later should we need to audit them
-    archiveArtifacts artifacts: 'binaries/**', fingerprint: true
-  }
-}
